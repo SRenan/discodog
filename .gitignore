@@ -1,0 +1,16 @@
+node_modules/
+dist/
+
+# Secrets
+token.txt
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+*.swo
+.vscode/
+.idea/

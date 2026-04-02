@@ -1,0 +1,15 @@
+[Unit]
+Description=Discodog Discord Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/discodog
+ExecStart=/usr/bin/node dist/bot.js
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
