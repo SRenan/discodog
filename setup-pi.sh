@@ -1,10 +1,22 @@
 #!/bin/bash
-# Setup script for RetroPie (Raspberry Pi 3B+ / ARMv7 / Debian-based)
+# Setup script for RetroPie (Raspberry Pi 3B+ / ARMv7 / Debian Buster)
 # Run this ON the Pi after cloning the repo.
 
 set -e
 
+NODE_VERSION="18.20.8"
+NODE_ARCH="armv7l"
+NODE_DIR="/opt/node-v${NODE_VERSION}"
+
 echo "=== discodog setup for RetroPie ==="
+
+# Fix Buster EOL repos — the original mirrors are gone
+SOURCES_FILE="/etc/apt/sources.list"
+if grep -q "raspbian.raspberrypi.org" "$SOURCES_FILE" 2>/dev/null; then
+  echo "Fixing apt sources for Buster (EOL)..."
+  sudo sed -i 's|http://raspbian.raspberrypi.org/raspbian|http://legacy.raspbian.org/raspbian|g' "$SOURCES_FILE"
+  sudo apt-get update
+fi
 
 # Install fswebcam if not present
 if ! command -v fswebcam &> /dev/null; then
@@ -14,14 +26,24 @@ else
   echo "fswebcam already installed."
 fi
 
-# Install Node.js 18 LTS (ARMv7 compatible) if not present or too old
-REQUIRED_NODE_MAJOR=18
+# Install Node.js 18 LTS via prebuilt binary (nodesource doesn't support Buster anymore)
 CURRENT_NODE_MAJOR=$(node -v 2>/dev/null | sed 's/v\([0-9]*\).*/\1/' || echo "0")
+CURRENT_NODE_MAJOR=${CURRENT_NODE_MAJOR:-0}
 
-if [ "$CURRENT_NODE_MAJOR" -lt "$REQUIRED_NODE_MAJOR" ]; then
-  echo "Installing Node.js ${REQUIRED_NODE_MAJOR}.x..."
-  curl -fsSL https://deb.nodesource.com/setup_${REQUIRED_NODE_MAJOR}.x | sudo -E bash -
-  sudo apt-get install -y nodejs
+if [ "$CURRENT_NODE_MAJOR" -lt 18 ]; then
+  echo "Installing Node.js v${NODE_VERSION} (${NODE_ARCH})..."
+  TARBALL="node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz"
+  curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/${TARBALL}" -o "/tmp/${TARBALL}"
+  sudo mkdir -p "$NODE_DIR"
+  sudo tar -xJf "/tmp/${TARBALL}" -C "$NODE_DIR" --strip-components=1
+  rm "/tmp/${TARBALL}"
+
+  # Symlink into /usr/local/bin
+  sudo ln -sf "${NODE_DIR}/bin/node" /usr/local/bin/node
+  sudo ln -sf "${NODE_DIR}/bin/npm" /usr/local/bin/npm
+  sudo ln -sf "${NODE_DIR}/bin/npx" /usr/local/bin/npx
+
+  echo "Node.js $(node -v) installed."
 else
   echo "Node.js $(node -v) is sufficient."
 fi
